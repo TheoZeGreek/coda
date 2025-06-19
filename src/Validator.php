@@ -25,9 +25,20 @@ final class Validator
     private static function checkIban(string $iban): bool
     {
         $rearranged = substr($iban, 4) . substr($iban, 0, 4);
-        $numeric = preg_replace_callback('/[A-Z]/', static function (array $match): string {
-            return (string) (ord($match[0]) - 55);
-        }, $rearranged);
-        return intval($numeric) % 97 === 1;
+        $numeric = preg_replace_callback(
+            '/[A-Z]/',
+            static function (array $match): string {
+                return (string) (ord($match[0]) - 55);
+            },
+            $rearranged
+        );
+
+        $remainder = 0;
+        $len = strlen($numeric);
+        for ($i = 0; $i < $len; $i++) {
+            $remainder = ($remainder * 10 + (int) $numeric[$i]) % 97;
+        }
+
+        return $remainder === 1;
     }
 }
