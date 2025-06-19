@@ -8,31 +8,65 @@ final class CodaBuilder
 {
     public static function build(array $data): string
     {
+        $seq = 1;
         $lines = [];
-        $seq = '0001';
+
+        // Record type 0 - file header
         $lines[] = self::fixed(
-            '0' . str_pad('010124', 6) .
-            str_pad($data['iban'], 12) .
-            ' ' .
-            str_pad('', 109)
+            '0' .
+            str_pad(date('dmy'), 6) .
+            str_pad(substr($data['iban'], 0, 16), 16) .
+            str_pad('', 101),
+            $seq++
         );
-        $lines[] = self::fixed('1' . str_pad('000000', 6) . str_pad('', 121));
+
+        // Record type 1 - opening balance
+        $lines[] = self::fixed(
+            '1' .
+            str_pad(self::amount((float) $data['opening_balance']), 20) .
+            str_pad('', 103),
+            $seq++
+        );
+
+        // Record type 2.x - operations
         foreach ($data['operations'] as $op) {
             $lines[] = self::fixed(
                 '21' .
                 str_pad($op['date'], 6) .
-                str_pad($op['label'], 100) .
-                str_pad(number_format((float) $op['amount'], 2, ',', ''), 20)
+                str_pad($op['label'], 96) .
+                str_pad(self::amount((float) $op['amount']), 20),
+                $seq++
             );
-            $seq = sprintf('%04d', ((int)$seq + 1) % 10000);
         }
-        $lines[] = self::fixed('8' . str_pad('010124', 6) . str_pad('', 121));
-        $lines[] = self::fixed('9' . str_pad('', 127));
+
+        // Record type 8 - closing balance
+        $lines[] = self::fixed(
+            '8' .
+            str_pad(self::amount((float) $data['closing_balance']), 20) .
+            str_pad('', 103),
+            $seq++
+        );
+
+        // Record type 9 - file trailer
+        $lines[] = self::fixed(
+            '9' . str_pad('', 123),
+            $seq++
+        );
+
         return implode("\r\n", $lines) . "\r\n";
     }
 
-    private static function fixed(string $line): string
+    private static function fixed(string $content, int $seq): string
     {
-        return str_pad(substr($line, 0, 128), 128);
+        $line = str_pad(substr($content, 0, 124), 124);
+        $line .= sprintf('%04d', $seq <= 9999 ? $seq : 9999);
+        return $line;
+    }
+
+    private static function amount(float $amount): string
+    {
+        $sign = $amount < 0 ? '-' : '+';
+        $amount = abs($amount);
+        return $sign . str_pad(number_format($amount, 2, ',', ''), 18, '0', STR_PAD_LEFT);
     }
 }
