@@ -10,6 +10,13 @@ This project converts Belgian bank statements in PDF format to CODA v2.4 files.
 4. Ensure the `tmp/` folder is writable by the web server.
 5. Access `public/index.html` to start using the tool.
 
+## Dependencies
+
+The application relies on a few Composer packages:
+
+- `smalot/pdfparser` for parsing PDF statement files.
+- `openai-php/client` for communicating with the OpenAI API.
+
 ### Without Composer
 
 If you prefer not to rely on Composer in production, copy the library sources in
