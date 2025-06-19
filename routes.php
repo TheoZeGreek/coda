@@ -7,21 +7,27 @@ require_once __DIR__ . '/lib/autoload.php';
 use Coda\Parser;
 use Coda\CodaBuilder;
 use Coda\Validator;
+use Coda\Upload;
 
 header('Access-Control-Allow-Origin: *');
 
 $route = $_GET['route'] ?? '';
 if ($route === 'upload' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $file = $_FILES['file'] ?? null;
-    if (!$file) {
+    try {
+        if (!$file) {
+            throw new RuntimeException('No file provided');
+        }
+        Upload::validate($file);
+        $path = __DIR__ . '/tmp/' . uniqid('pdf_', true) . '.pdf';
+        move_uploaded_file($file['tmp_name'], $path);
+        $data = Parser::fromPdf($path);
+        echo json_encode($data);
+        unlink($path);
+    } catch (RuntimeException $e) {
         http_response_code(400);
-        exit;
+        echo $e->getMessage();
     }
-    $path = __DIR__ . '/tmp/' . uniqid('pdf_', true) . '.pdf';
-    move_uploaded_file($file['tmp_name'], $path);
-    $data = Parser::fromPdf($path);
-    echo json_encode($data);
-    unlink($path);
     exit;
 }
 
